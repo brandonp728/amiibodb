@@ -7,6 +7,7 @@ cursor  = db.cursor()
 
 def print_data(data):
     print('-'*40)
+    print('Name' + '-'*5 + 'Series' + '-'*5 + 'Release Date'+ '-'*5 + 'Is Owned' + '-'*5 + 'Is Japan Only')
     for row in data:
         print("%s" % (row,))
     print('-'*40)
@@ -34,6 +35,8 @@ def determine_function(choice):
         view_by_series()
     elif choice == "3":
         view_needed()
+    elif choice == "4":
+        custom_query()
     elif choice == "DT":
         drop_tables()
     elif choice == "cls":
@@ -52,10 +55,12 @@ def print_message(msg):
 
 def print_menu():
     print("0) Perform first time setup")
-    print("DT) Drop tables")
     print("1) Add new amiibo")
     print("2) View by Series")
     print("3) View ones needed")
+    print("4) Custom query")
+    print("DT - Drop tables")
+    print("cls - Clear screen")
     print("-1) Exit\n")
 
 def determine_is_owned(is_owned):
@@ -113,18 +118,37 @@ def add_new_amiibo():
     reg_input       = False
     if series_list.__len__() > 0:
         new_list = print_list(series_list)
-        a = input('Here\'s a list of series currently\navailable, is it one of these?\nPress the number to use that, otherwise -1\n')
+        a = input('\nHere\'s a list of series currently\navailable, is it one of these?\nPress the number to use that, otherwise -1\n')
         if a == "-1":
             reg_input   = True
         else:
             series      = new_list[int(a)]
             print('\nYou chose ' + series)
     if series_list.__len__() == 0 or reg_input:
-        series          = input('What is the series?\n')
-    
-    release_date    = input('What is the original release date?\n')
-    is_owned        = input('Do you own it? y/n\n')
-    is_jap_only     = input('Is it a japanese only amiibo? y/n\n')
+        series          = input('\nWhat is the series?\n')
+
+    ###################################################################################
+    select = """
+    SELECT distinct release_date
+    FROM amiibo
+    """
+    cursor.execute(select)
+    date_list     = cursor.fetchall()
+    reg_input       = False
+
+    if date_list.__len__() > 0:
+        new_list = print_list(date_list)
+        a = input('\nHere\'s a list of dates currently\navailable, is it one of these?\nPress the number to use that, otherwise -1\n')
+        if a == "-1":
+            reg_input   = True
+        else:
+            release_date      = new_list[int(a)]
+            print('\nYou chose ' + release_date)
+    if date_list.__len__() == 0 or reg_input:
+        release_date          = input('\nWhat is the release date?\n')
+
+    is_owned        = input('\nDo you own it? y/n\n')
+    is_jap_only     = input('\nIs it a japanese only amiibo? y/n\n')
     
     select = """
     SELECT rowid 
@@ -136,7 +160,7 @@ def add_new_amiibo():
     series_id   = all_entries
     
     if series_id.__len__() == 0:
-        print('Looks like it\'s a new series, lemme add that for you')
+        print('\nLooks like it\'s a new series, lemme add that for you')
         
         insert = """
         INSERT INTO series
@@ -176,7 +200,7 @@ def view_by_series():
     
     if series == 'all':
         select = """
-        SELECT *
+        SELECT A.name, S.name, A.release_date, A.is_owned, A.is_jap_only
         FROM amiibo A
         INNER JOIN series S on A.series_id = S.rowid
         """
@@ -186,7 +210,7 @@ def view_by_series():
         view_by      = new_list[int(series)]
         print('You have selected ' + view_by)
         select = """
-        SELECT *
+        SELECT A.name, S.name, A.release_date, A.is_owned, A.is_jap_only
         FROM amiibo A
         INNER JOIN series S on A.series_id = S.rowid
         WHERE series_id = (?)
@@ -219,6 +243,11 @@ def drop_tables():
         print_message('DROPPED SERIES')
     except OperationalError:
         print('Series already dropped\n')
+
+def custom_query():
+    q = input('\nEnter your query\n')
+    cursor.execute(q)
+    return
 
 def main():
     print("Welcome to the amiibo db!")
